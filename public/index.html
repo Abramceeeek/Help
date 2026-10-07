@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sofia's Placement Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&display=swap">
+<style>
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#14213a; --muted:#5b6679; --line:#dfe3ea;
+  --accent:#1f5fd6; --accent-soft:#e6eefc;
+  --urgent:#c2410c; --urgent-soft:#fdeee5; --ok:#17784a; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fbf1d9;
+  --bad:#a1263a; --bad-soft:#fbe7ea; --violet:#6b3fc4; --violet-soft:#efe8fb;
+  --display:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1522; --surface:#161e2e; --ink:#e7ecf5; --muted:#9aa5b8; --line:#26314a;
+  --accent:#7aa7ff; --accent-soft:#1c2a47;
+  --urgent:#ff9a66; --urgent-soft:#3a2117; --ok:#5fd39a; --ok-soft:#14301f; --warn:#f0c564; --warn-soft:#352a12;
+  --bad:#ff8496; --bad-soft:#3a1820; --violet:#b9a0ff; --violet-soft:#271d40; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-size:clamp(28px,5vw,40px);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--display);font-size:20px;margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{color:var(--muted);max-width:65ch;margin:6px 0 0}
+.banner{border-radius:10px;padding:10px 14px;font-size:14px;background:var(--warn-soft);color:var(--warn)}
+.banner.ok{background:var(--ok-soft);color:var(--ok)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat .n{font-family:var(--display);font-size:28px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.stat .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font:500 13px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.count{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;background:var(--surface);border:1px solid var(--line);border-left-width:4px;border-radius:10px;padding:14px 16px}
+.row[data-s="applied"],.row[data-s="test"]{border-left-color:var(--accent)}
+.row[data-s="interview"]{border-left-color:var(--violet)}
+.row[data-s="offer"]{border-left-color:var(--ok)}
+.row[data-s="rejected"],.row[data-s="skip"]{opacity:.6}
+.row[data-s="writing"]{border-left-color:var(--warn)}
+.main{min-width:0;display:flex;flex-direction:column;gap:4px}
+.top{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.co{font-weight:600}
+.role a{color:var(--accent);text-decoration:none}
+.role a:hover{text-decoration:underline}
+.meta{font-family:var(--mono);font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;font-variant-numeric:tabular-nums}
+.why{font-size:14px;color:var(--muted);margin:2px 0 0}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.tag{font-size:11.5px;font-weight:500;padding:2px 8px;border-radius:5px;background:var(--accent-soft);color:var(--accent)}
+.tag.vet{background:var(--warn-soft);color:var(--warn)}
+.side{display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:150px}
+.due{text-align:right;font-family:var(--mono);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.due strong{display:block;font-size:15px;font-family:var(--body);font-weight:600}
+.due.soon strong{color:var(--urgent)} .due.roll strong{color:var(--ok)} .due.later strong,.due.past strong{color:var(--muted)}
+select.st{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 8px;font-size:13.5px;font-weight:500;cursor:pointer}
+.noteline{grid-column:1/-1;display:flex;gap:8px;align-items:center}
+.noteline input{flex:1;min-width:0;border:1px dashed var(--line);background:transparent;border-radius:8px;padding:5px 9px;font-size:13.5px;color:var(--ink)}
+.noteline input:focus{border-style:solid}
+.upd{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.rm{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;text-decoration:underline}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;max-height:520px;overflow:auto}
+.feed li{font-size:13.5px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.feed time{display:block;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:5px;background:var(--accent-soft);color:var(--accent)}
+.pill.offer{background:var(--ok-soft);color:var(--ok)} .pill.interview{background:var(--violet-soft);color:var(--violet)}
+.pill.rejected,.pill.skip{background:var(--bad-soft);color:var(--bad)} .pill.writing{background:var(--warn-soft);color:var(--warn)}
+.pill.todo{background:var(--line);color:var(--muted)}
+form.add{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+form.add input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 9px;font-size:13.5px;min-width:0}
+form.add .full{grid-column:1/-1}
+.btn{border:0;background:var(--ink);color:var(--bg);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
+.small{font-size:12.5px;color:var(--muted)}
+.who{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.who input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 8px;width:120px}
+@media (max-width:560px){
+  .row{grid-template-columns:minmax(0,1fr)}
+  .side{align-items:flex-start;flex-direction:row;flex-wrap:wrap}
+  .due{text-align:left}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Year in industry · 2027–28 · shared tracker</div>
+    <h1>Sofia's Placement Tracker</h1>
+    <p class="lede">Change the status on each role as you go. Everyone with this link sees the same list, plus a feed of what changed and when.</p>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="cols">
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div class="bar" role="group" aria-label="Filter">
+        <button class="chip" data-f="all" aria-pressed="true">All</button>
+        <button class="chip" data-f="todo" aria-pressed="false">Not applied</button>
+        <button class="chip" data-f="active" aria-pressed="false">In progress</button>
+        <button class="chip" data-f="soon" aria-pressed="false">Due in 30 days</button>
+        <button class="chip" data-f="defence" aria-pressed="false">Defence</button>
+        <button class="chip" data-f="other" aria-pressed="false">Non-defence</button>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="list" id="list"></div>
+      <h2 style="margin-top:10px">Summer internships (backup)</h2>
+      <div class="list" id="summer"></div>
+    </div>
+
+    <aside style="display:flex;flex-direction:column;gap:14px">
+      <div class="panel">
+        <div class="who"><label for="who" class="small">Your name</label><input id="who" placeholder="Sofia"></div>
+        <p class="small" style="margin:0">Shown next to each update in the feed.</p>
+      </div>
+      <div class="panel">
+        <h2>Recent activity</h2>
+        <ul class="feed" id="feed"><li class="small">No updates yet. Changes appear here.</li></ul>
+      </div>
+      <div class="panel">
+        <h2>Add a role</h2>
+        <form class="add" id="addForm">
+          <input id="f-co" placeholder="Company" required>
+          <input id="f-loc" placeholder="Location">
+          <input id="f-role" class="full" placeholder="Role title" required>
+          <input id="f-due" type="date" aria-label="Deadline">
+          <input id="f-pay" placeholder="Salary">
+          <input id="f-url" class="full" placeholder="Link (https://…)">
+          <button class="btn full" type="submit">Add role</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+  <p class="small">Role list checked 7 Oct 2026. "Rolling" deadlines can close early. The page refreshes every 30 seconds.</p>
+</div>
+
+<script>
+const roles = [
+ {id:"rb-ers",co:"Red Bull Powertrains (F1)",role:"Electronics & ERS Placement 2027",sector:"Motorsport / power electronics",def:false,loc:"Milton Keynes",start:"Jul 2027",pay:"Competitive + bonus",due:"2026-10-17",vet:"",why:"Power conversion, control electronics, sensors and battery management systems. Almost a perfect match for her BMS and rover power work. Closes soon.",url:"https://www.brightnetwork.co.uk/graduate-jobs/red-bull/electronics-ers-placement-powertrains-milton-keynes-2027-ak4q"},
+ {id:"honey",co:"Honeywell",role:"Electrical Engineer placement 2027",sector:"Industrial electronics",def:false,loc:"UK",start:"2027",pay:"Not listed",due:"rolling",vet:"",why:"Listed as rolling on Bright Network. Honeywell has run embedded firmware placements at Horsham before.",url:"https://www.brightnetwork.co.uk/application-deadlines/jobs/industrial-placements/technology/"},
+ {id:"adi",co:"Analog Devices",role:"Engineering Internship (placement)",sector:"Semiconductors",def:false,loc:"Edinburgh / Limerick (check)",start:"2027",pay:"Not listed",due:"rolling",vet:"",why:"Chip company that makes analog and mixed-signal parts. Strong for an electronics CV.",url:"https://www.brightnetwork.co.uk/application-deadlines/jobs/industrial-placements/technology/"},
+ {id:"nxp",co:"NXP Semiconductors",role:"Electronic Engineering Student Placement",sector:"Semiconductors",def:false,loc:"Southampton, Glasgow",start:"2027",pay:"",due:"opens:Not posted yet",vet:"",why:"Leeds EEE is part of NXP's University Programme, so she has a natural link to mention. Ran a 2026 placement; an AI & Software 2027 internship is already listed.",url:"https://eps.leeds.ac.uk/news/article/5343/electronic-and-electrical-engineering-joins-nxp-university-programme"},
+ {id:"abb",co:"ABB",role:"Year in Industry – Electronics/Embedded Software Assistant Engineer",sector:"Instrumentation",def:false,loc:"St Neots",start:"2027",pay:"",due:"opens:Expect spring 2027",vet:"",why:"Embedded C, circuit design and hardware test. The 2026 role stayed open until June, so this one's a good later option.",url:"https://www.gradcracker.com/hub/23/abb-ltd/work-placement-internship/81412/year-in-industry-electronics-embedded-software-assistant-engineer"},
+ {id:"bab-elec",co:"Babcock (Cavendish Nuclear)",role:"Electrical Engineering Undergraduate Placement Year",sector:"Defence / nuclear",def:true,loc:"Leicester (hybrid)",start:"Sep 2027",pay:"£26,784",due:"2026-10-20",vet:"SC clearance",why:"Electrical, C&I and control systems work. Strong fit for the power side of Project ORION.",url:"https://www.gradcracker.com/hub/113/babcock-international-group/work-placement-internship/83111/electrical-engineering-undergraduate-placement-year"},
+ {id:"bab-sub",co:"Babcock",role:"Engineering Undergraduate Placement Year (Submarine Support)",sector:"Defence",def:true,loc:"Bristol (hybrid)",start:"Sep 2027",pay:"£26,800",due:"2026-10-20",vet:"BPSS",why:"Open to electrical, software and avionics students. Supports MoD submarines.",url:"https://www.gradcracker.com/hub/113/babcock-international-group/work-placement-internship/83036/engineering-undergraduate-placement-year"},
+ {id:"airbus",co:"Airbus",role:"Engineering placements: Environmental Test, Plant Support Engineer",sector:"Aerospace / space",def:false,loc:"Stevenage, Portsmouth",start:"Jul 2027",pay:"£24,500",due:"2026-10-25",vet:"",why:"Space hardware testing at Stevenage is the most electronics-relevant option. Some engineering roles closed on 27 Sep.",url:"https://www.gradcracker.com/search/electronic-electrical/electronic-electrical-work-placements-internships-with-airbus"},
+ {id:"cat",co:"Caterpillar",role:"Design & Development Engineering Placement 2027",sector:"Heavy machinery",def:false,loc:"UK sites",start:"2027",pay:"Not listed",due:"2026-10-25",vet:"",why:"Product development (R&D-style) at a big engineering company with no defence vetting.",url:"https://www.brightnetwork.co.uk/application-deadlines/jobs/industrial-placements/"},
+ {id:"lm",co:"Lockheed Martin UK",role:"Engineering Placement (systems, integration & test, software)",sector:"Defence / aerospace",def:true,loc:"Havant, Gloucester, Westbury",start:"Jun 2027",pay:"£26,149",due:"2026-10-31",vet:"Defence: check eligibility",why:"Airborne mission systems. Includes a 9-day fortnight.",url:"https://targetjobs.co.uk/jobs/engineering-12-month-placement-239983"},
+ {id:"ge",co:"GE Aerospace",role:"Research & Development or Systems Engineering 12-month placement",sector:"Aerospace",def:false,loc:"Cheltenham, Gloucester",start:"2027",pay:"Competitive",due:"2026-10-31",vet:"",why:"Real R&D role. The Systems role lists Electrical as a discipline. Asks for an expected 2:1.",url:"https://www.gradcracker.com/hub/150/ge-aerospace/search/engineering-work-placements-internships"},
+ {id:"awe",co:"AWE",role:"Engineering – Year in Industry",sector:"Defence / nuclear",def:true,loc:"Aldermaston, Burghfield",start:"Aug 2027",pay:"£24,500",due:"2026-10-31",vet:"Strict UK vetting",why:"Electrical is one of the listed disciplines. Very research-heavy work.",url:"https://www.gradcracker.com/hub/61/awe/search/engineering-work-placements-internships"},
+ {id:"sse",co:"SSE",role:"Engineering Year in Industry Internship (Electrical / C&I)",sector:"Energy",def:false,loc:"Leeds, Glasgow, Perth",start:"Sep 2027",pay:"£26,239",due:"2026-11-01",vet:"UK right to work",why:"There's a Leeds site, so she could stay put. Power systems work with no defence vetting.",url:"https://www.gradcracker.com/hub/420/sse/work-placement-internship/84602/engineering-year-in-industry-internship"},
+ {id:"focus",co:"Focusrite",role:"QA Engineering Placement (audio & MIDI hardware / firmware)",sector:"Consumer audio electronics",def:false,loc:"High Wycombe",start:"2027",pay:"£26,250",due:"2026-11-27",vet:"",why:"Hands-on hardware and firmware testing. Last year they also ran a Hardware Electronics & Firmware placement, so watch for it.",url:"https://apply.workable.com/focusrite/jobs/view/7D70C84FE2"},
+ {id:"mbda",co:"MBDA",role:"Electronics Engineer – Undergraduate Placement 2027",sector:"Defence (missiles)",def:true,loc:"Stevenage",start:"Sep 2027",pay:"£24,460",due:"2027-01-04",vet:"British citizen only",why:"Three tracks: electronics design, missile electrical architecture, and test. MBDA has 26 placement roles in total, all due 4 Jan.",url:"https://www.gradcracker.com/hub/115/mbda-uk/work-placement-internship/83855/electronics-engineer-undergraduate-placement-2027"},
+ {id:"bae-elec",co:"BAE Systems",role:"Undergraduate Electronic Engineer",sector:"Defence",def:true,loc:"Great Baddow (Essex)",start:"Jun 2027",pay:"£25,900",due:"rolling",vet:"BPSS + nationality rules",why:"This is the BAE one she mentioned. Open now and closes without notice, so apply early.",url:"https://www.gradcracker.com/hub/141/bae-systems/work-placement-internship/83864/undergraduate-electronic-engineer"},
+ {id:"bae-hw",co:"BAE Systems",role:"Undergraduate Hardware Engineer",sector:"Defence",def:true,loc:"Rochester, Broad Oak",start:"Jun 2027",pay:"£25,900",due:"rolling",vet:"BPSS + nationality rules",why:"Hardware design. The closest BAE role to R&D.",url:"https://www.gradcracker.com/hub/141/bae-systems/search/engineering-work-placements-internships?order=grade_asc&page=1"},
+ {id:"bae-ee",co:"BAE Systems",role:"Undergraduate Electrical / Electrical Power Engineer",sector:"Defence (naval)",def:true,loc:"Portsmouth, Barrow, Broad Oak, Great Baddow",start:"Jun 2027",pay:"£25,900",due:"rolling",vet:"BPSS + nationality rules",why:"Power systems. Matches her battery and BMS work.",url:"https://www.gradcracker.com/hub/141/bae-systems/search/engineering-work-placements-internships?order=grade_asc&page=1"},
+ {id:"bae-test",co:"BAE Systems",role:"Undergraduate Test Systems Engineer",sector:"Defence",def:true,loc:"Rochester",start:"Jun 2027",pay:"£25,900",due:"rolling",vet:"BPSS + nationality rules",why:"Test rigs and embedded test. Good use of her fault-finding experience.",url:"https://www.gradcracker.com/hub/141/bae-systems/search/engineering-work-placements-internships?order=grade_asc&page=1"},
+ {id:"ng",co:"Northrop Grumman UK",role:"Industrial Placement – Systems Engineer 2027",sector:"Defence",def:true,loc:"UK",start:"2027",pay:"Not listed",due:"rolling",vet:"Defence: check eligibility",why:"Systems engineering. Less hardware-focused, but a solid defence name.",url:"https://www.brightnetwork.co.uk/application-deadlines/jobs/industrial-placements/"},
+ {id:"jag",co:"Jaguar TCS Racing (Formula E)",role:"Industrial Placement 2027–28 – Powertrain",sector:"Motorsport / EV",def:false,loc:"On-site",start:"Sep 2027",pay:"Not listed",due:"rolling",vet:"",why:"Traction motors, inverters and PCB design. Needs a cover letter. A very good match for her battery work.",url:"https://targetjobs.co.uk/jobs/industrial-placement-2027-2028-powertrain-jaguar-tcs-racing-239129"},
+ {id:"leo",co:"Leonardo UK",role:"Industrial placements: Electronics, Hardware, Firmware, Antenna",sector:"Defence electronics",def:true,loc:"Edinburgh, Luton, Southampton, Basildon, Bristol",start:"2027",pay:"£25–30k (last year)",due:"opens:Opens w/c 19 Oct",vet:"BPSS, may need SC",why:"Probably the best R&D-electronics match on this list. Set a reminder for opening day.",url:"https://careers.uk.leonardo.com/gb/en/early-careers/placements/industrial-internships"},
+ {id:"thales",co:"Thales UK",role:"Engineering placements 2027",sector:"Defence electronics",def:true,loc:"Reading, Glasgow, Templecombe, others",start:"2027",pay:"",due:"opens:Opening autumn",vet:"Defence vetting",why:"Follow Thales on Gradcracker to get an alert when it opens.",url:"https://www.gradcracker.com/hub/162/thales/search/engineering-work-placements-internships"},
+ {id:"arm",co:"Arm",role:"Hardware Engineering Intern (12-month option)",sector:"Semiconductors",def:false,loc:"Cambridge, Manchester, Sheffield",start:"2027",pay:"",due:"opens:Usually opens Jan–Mar",vet:"",why:"Chip design and verification. A dream fit for an embedded + ML profile. Last year's round closed in March.",url:"https://careers.arm.com/"},
+ {id:"jlr",co:"JLR",role:"Undergraduate Engineering (Electrical & Complex Systems)",sector:"Automotive",def:false,loc:"Gaydon, Whitley",start:"Jul 2027",pay:"~£23k (last year)",due:"opens:Check now (closed late Nov last year)",vet:"",why:"Vehicle electronics and EV systems.",url:"https://careers.jlr.com/early-careers/undergraduates/undergraduate-engineering"},
+ {id:"ren",co:"Renishaw",role:"Electronics Industrial Placement",sector:"Precision engineering",def:false,loc:"Gloucestershire, Wales",start:"2027",pay:"",due:"opens:Check careers page",vet:"",why:"Electronic design, commissioning and test, with a whole year inside one product division.",url:"https://www.renishaw.com/en/44909.aspx"},
+ {id:"cirrus",co:"Cirrus Logic / Dyson / QinetiQ / Rolls-Royce / Ultra",role:"Watch list: electronics placements not posted yet",sector:"Mixed",def:false,loc:"Various",start:"2027",pay:"",due:"opens:Check monthly",vet:"QinetiQ: 5 yrs UK residency",why:"These usually post later in the cycle. Check once a month.",url:"https://www.ukesf.org/"}
+];
+const summer = [
+ {id:"s-bae",co:"BAE Systems",role:"Summer Intern Electronic Engineer",sector:"Defence",def:true,loc:"Great Baddow, Guildford",start:"Jun 2027 · 12 wks",pay:"£25,900 pro rata",due:"rolling",vet:"BPSS + nationality rules",why:"",url:"https://www.gradcracker.com/hub/141/bae-systems/search/engineering-work-placements-internships?order=grade_asc&page=1"},
+ {id:"s-mbda",co:"MBDA",role:"Electronic Engineer / Computer Vision & AI / RF Systems summer placement",sector:"Defence",def:true,loc:"Stevenage, Bristol",start:"Jun 2027 · 10 wks",pay:"£24,460 pro rata",due:"2027-01-04",vet:"British citizen only",why:"",url:"https://www.gradcracker.com/hub/115/mbda-uk/search/engineering-work-placements-internships"},
+ {id:"s-bab",co:"Babcock",role:"Electrical Engineering Undergraduate Summer Internship",sector:"Defence",def:true,loc:"UK",start:"Summer 2027",pay:"",due:"rolling",vet:"Vetting likely",why:"",url:"https://www.gradcracker.com/hub/113/babcock-international-group/work-placement-internship/83035/electrical-engineering-undergraduate-summer-internship"}
+];
+
+const STATUS = [
+  ["todo","Not started"],["writing","Writing it"],["applied","Applied"],["test","Online test"],
+  ["interview","Interview"],["offer","Offer 🎉"],["rejected","Rejected"],["skip","Skipping"]
+];
+const LABEL = Object.fromEntries(STATUS);
+const T = new Date(); T.setHours(0,0,0,0);
+
+let state = { status:{}, custom:{}, log:[], pinRequired:false };
+let online = true;
+let filter = "all";
+
+const ls = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v);}catch(e){return d} },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+};
+const whoEl = document.getElementById("who");
+whoEl.value = ls.get("who","");
+whoEl.addEventListener("change",()=>ls.set("who",whoEl.value.trim()));
+
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function dueInfo(d){
+  if(!d||d==="rolling") return {cls:"roll",big:"Open now",small:"rolling",sort:1,days:9e9};
+  if(d.startsWith("opens:")) return {cls:"later",big:"Not open",small:d.slice(6),sort:3,days:9e9};
+  const dt=new Date(d+"T00:00:00"), days=Math.round((dt-T)/864e5);
+  return {cls:days<0?"past":days<=30?"soon":"", big:dt.toLocaleDateString("en-GB",{day:"numeric",month:"short"}),
+    small:days<0?"closed":days===0?"today":days+" days left", sort:days<0?4:0, days, t:dt.getTime()};
+}
+function ago(iso){
+  const s=(Date.now()-new Date(iso))/1000;
+  if(s<60) return "just now"; if(s<3600) return Math.floor(s/60)+" min ago";
+  if(s<86400) return Math.floor(s/3600)+" h ago";
+  return new Date(iso).toLocaleDateString("en-GB",{day:"numeric",month:"short"})+", "+new Date(iso).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+}
+const allRoles = () => [...roles, ...Object.values(state.custom)];
+const st = id => (state.status[id]||{}).status || "todo";
+
+function rowHTML(r){
+  const d=dueInfo(r.due), s=state.status[r.id]||{status:"todo",note:""};
+  const tags=[`<span class="tag">${esc(r.sector)}</span>`];
+  if(r.vet) tags.push(`<span class="tag vet">${esc(r.vet)}</span>`);
+  const opts=STATUS.map(([v,l])=>`<option value="${v}"${v===s.status?" selected":""}>${l}</option>`).join("");
+  const label=`${r.co}: ${r.role}`;
+  return `<div class="row" data-id="${esc(r.id)}" data-s="${s.status}" data-label="${esc(label)}">
+    <div class="main">
+      <div class="top"><span class="co">${esc(r.co)}</span><span class="role">${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.role)} ↗</a>`:esc(r.role)}</span></div>
+      <div class="meta">${r.loc?`<span>${esc(r.loc)}</span>`:""}${r.start?`<span>Start ${esc(r.start)}</span>`:""}${r.pay?`<span>${esc(r.pay)}</span>`:""}</div>
+      ${r.why?`<p class="why">${esc(r.why)}</p>`:""}
+      <div class="tags">${tags.join("")}</div>
+    </div>
+    <div class="side">
+      <div class="due ${d.cls}"><strong>${esc(d.big)}</strong><span>${esc(d.small)}</span></div>
+      <select class="st" id="st-${esc(r.id)}" aria-label="Status for ${esc(r.co)}">${opts}</select>
+      ${s.updatedAt?`<span class="upd">updated ${ago(s.updatedAt)}</span>`:""}
+      ${r.custom?`<button class="rm" data-rm="${esc(r.id)}">remove</button>`:""}
+    </div>
+    <div class="noteline"><input id="note-${esc(r.id)}" value="${esc(s.note||"")}" placeholder="Note (e.g. test due Fri, interview 12 Nov)" aria-label="Note for ${esc(r.co)}"></div>
+  </div>`;
+}
+function order(a,b){const A=dueInfo(a.due),B=dueInfo(b.due);return A.sort!==B.sort?A.sort-B.sort:(A.t||0)-(B.t||0)}
+function pass(r){
+  const s=st(r.id), d=dueInfo(r.due);
+  switch(filter){
+    case "todo": return s==="todo"||s==="writing";
+    case "active": return ["applied","test","interview","offer"].includes(s);
+    case "soon": return d.sort===0&&d.days<=30;
+    case "defence": return !!r.def;
+    case "other": return !r.def;
+    default: return true;
+  }
+}
+function render(){
+  // keep the field being typed in from being wiped by a refresh
+  const a=document.activeElement; if(a && a.id && a.id.startsWith("note-")) return;
+  const main=allRoles().filter(pass).sort(order);
+  document.getElementById("list").innerHTML=main.map(rowHTML).join("")||`<p class="small">Nothing matches this filter.</p>`;
+  document.getElementById("summer").innerHTML=summer.filter(pass).sort(order).map(rowHTML).join("")||`<p class="small">Nothing matches this filter.</p>`;
+  const every=[...allRoles(),...summer], c=k=>every.filter(r=>st(r.id)===k).length;
+  const appliedAll=every.filter(r=>["applied","test","interview","offer","rejected"].includes(st(r.id))).length;
+  const openNow=allRoles().filter(r=>{const d=dueInfo(r.due);return st(r.id)==="todo"&&(d.sort===0||d.sort===1)}).length;
+  document.getElementById("stats").innerHTML=[
+    [appliedAll,"applications sent"],[c("test")+c("interview"),"tests & interviews"],[c("offer"),"offers"],
+    [openNow,"open roles not started"],[every.length,"roles on the list"]
+  ].map(([n,l])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  document.getElementById("count").textContent=`${main.length} shown`;
+  const feed=document.getElementById("feed");
+  feed.innerHTML=state.log.length?state.log.slice(0,60).map(e=>`<li><time>${ago(e.t)} · ${esc(e.who||"")}</time>${
+    e.added?`Added <b>${esc(e.label)}</b>`:
+    `<b>${esc(e.label||e.id)}</b> ${e.from!==e.to?`<span class="pill ${e.from}">${esc(LABEL[e.from]||e.from)}</span> → <span class="pill ${e.to}">${esc(LABEL[e.to]||e.to)}</span>`:`note: ${esc(e.note)}`}`
+  }</li>`).join(""):`<li class="small">No updates yet. Changes appear here.</li>`;
+}
+
+function banner(msg,ok){const b=document.getElementById("banner");b.textContent=msg;b.className="banner"+(ok?" ok":"");b.hidden=!msg}
+
+async function load(){
+  try{
+    const r=await fetch("/api/state",{cache:"no-store"});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||r.status);
+    state={...state,...j}; online=true; banner("");
+  }catch(e){
+    online=false;
+    const local=ls.get("offline-state",null); if(local) state=local;
+    banner("Not connected to shared storage, so changes are only saved in this browser. ("+e.message+")");
+  }
+  render();
+}
+async function post(payload){
+  payload.who=whoEl.value.trim()||"Someone";
+  if(!online){ // local-only fallback
+    const now=new Date().toISOString();
+    if(payload.action==="status"){
+      const prev=state.status[payload.id]||{status:"todo"};
+      state.status[payload.id]={status:payload.status,note:payload.note,updatedAt:now};
+      state.log.unshift({t:now,id:payload.id,label:payload.label,from:prev.status,to:payload.status,note:prev.status===payload.status?payload.note:"",who:payload.who});
+    }else if(payload.action==="add"){
+      const id="c-"+Date.now().toString(36); state.custom[id]={...payload.role,id,custom:true,sector:"Added"};
+      state.log.unshift({t:now,id,label:payload.role.co+": "+payload.role.role,added:true,who:payload.who});
+    }else if(payload.action==="remove"){ delete state.custom[payload.id]; delete state.status[payload.id]; }
+    ls.set("offline-state",state); render(); return true;
+  }
+  if(state.pinRequired) payload.pin=ls.get("pin","");
+  let r=await fetch("/api/state",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  if(r.status===401){
+    const p=window.prompt("Enter the edit PIN");
+    if(!p) return false;
+    ls.set("pin",p); payload.pin=p;
+    r=await fetch("/api/state",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  }
+  if(!r.ok){ const j=await r.json().catch(()=>({})); banner("Couldn't save: "+(j.error||r.status)); return false; }
+  await load(); return true;
+}
+
+document.addEventListener("change",async e=>{
+  const row=e.target.closest(".row"); if(!row) return;
+  if(e.target.matches("select.st")||e.target.matches(".noteline input")){
+    const id=row.dataset.id;
+    const status=row.querySelector("select.st").value, note=row.querySelector(".noteline input").value.trim();
+    e.target.blur();
+    await post({action:"status",id,status,note,label:row.dataset.label});
+  }
+});
+document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches(".noteline input")) e.target.blur(); });
+document.addEventListener("click",async e=>{
+  const rm=e.target.closest("[data-rm]"); if(rm){ await post({action:"remove",id:rm.dataset.rm}); return; }
+  const chip=e.target.closest(".chip"); if(chip){
+    filter=chip.dataset.f;
+    document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x===chip?"true":"false"));
+    render();
+  }
+});
+document.getElementById("addForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const v=id=>document.getElementById(id).value.trim();
+  const ok=await post({action:"add",role:{co:v("f-co"),role:v("f-role"),loc:v("f-loc"),due:v("f-due"),pay:v("f-pay"),url:v("f-url")}});
+  if(ok) e.target.reset();
+});
+
+load();
+setInterval(()=>{ if(!document.hidden) load(); },30000);
+</script>
+</body>
+</html>

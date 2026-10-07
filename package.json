@@ -1,0 +1,7 @@
+{
+  "name": "sofia-placement-tracker",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
