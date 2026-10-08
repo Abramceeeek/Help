@@ -16,7 +16,7 @@ sofia-tracker/
 
 1. Put this folder in a new GitHub repo (github.com → New repository → "uploading an existing file" → drag the folder contents in → Commit).
 2. Go to vercel.com → sign in with GitHub → **Add New → Project** → import the repo → Framework preset: **Other** → **Deploy**.
-3. In the project, open **Storage** → **Create Database** → pick **Upstash for Redis** (free plan) → connect it to this project. This adds the `KV_REST_API_URL` / `KV_REST_API_TOKEN` env vars automatically.
+3. In the project, open **Storage** → **Create Database** → pick **Upstash for Redis** or **Redis** (free plan) → connect it to this project with **Production** ticked. Either works: the API finds the settings automatically.
 4. (Recommended) **Settings → Environment Variables** → add `EDIT_PIN` = any 4–6 digit code. Viewing stays open; changing anything asks for the PIN once per browser. Give the PIN to Sofia.
 5. **Deployments** → the latest one → **⋯ → Redeploy** (so the new env vars load).
 6. Open the `.vercel.app` link and send it to Sofia.

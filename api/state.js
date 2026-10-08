@@ -1,48 +1,99 @@
-// Vercel serverless function: shared tracker state stored in Upstash Redis (free tier).
-// Env vars (set automatically when you connect Upstash Redis in Vercel → Storage):
-//   KV_REST_API_URL + KV_REST_API_TOKEN   or   UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+// Shared tracker state stored in Redis.
+// Works with whichever Redis Vercel's Storage tab gives you:
+//   • Upstash (REST):  KV_REST_API_URL + KV_REST_API_TOKEN, UPSTASH_REDIS_REST_URL + _TOKEN,
+//                      or the same names with any custom prefix (e.g. STORAGE_KV_REST_API_URL)
+//   • Redis / Redis Cloud (TCP): REDIS_URL (or any *_REDIS_URL / KV_URL starting with redis:// or rediss://)
 // Optional: EDIT_PIN — if set, changes need this PIN (viewing stays open to anyone with the link).
 
-const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const PIN = process.env.EDIT_PIN || "";
-
-const K_STATUS = "tracker:status";   // hash: roleId -> {status, note, updatedAt}
-const K_CUSTOM = "tracker:custom";   // hash: roleId -> role object added from the page
-const K_LOG = "tracker:log";         // list of activity entries, newest first
-
+const K_STATUS = "tracker:status";
+const K_CUSTOM = "tracker:custom";
+const K_LOG = "tracker:log";
 const STATUSES = ["todo", "writing", "applied", "test", "interview", "offer", "rejected", "skip"];
 
-async function redis(cmd) {
-  const r = await fetch(URL_, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify(cmd),
-  });
-  const j = await r.json();
-  if (j.error) throw new Error(j.error);
-  return j.result;
+// ---------- find the connection settings, whatever they're called ----------
+function findRest() {
+  const env = process.env;
+  const keys = Object.keys(env);
+  for (const k of keys) {
+    let base = null;
+    if (k.endsWith("REST_API_URL")) base = k.slice(0, -"REST_API_URL".length);       // ..._KV_REST_API_URL
+    else if (k.endsWith("REDIS_REST_URL")) base = k.slice(0, -"REDIS_REST_URL".length); // ..._UPSTASH_REDIS_REST_URL
+    if (base === null || !/^https?:\/\//.test(env[k] || "")) continue;
+    const tokenKey = k.endsWith("REST_API_URL") ? base + "REST_API_TOKEN" : base + "REDIS_REST_TOKEN";
+    if (env[tokenKey]) return { url: env[k], token: env[tokenKey] };
+  }
+  return null;
+}
+function findTcp() {
+  const env = process.env;
+  const prefer = ["REDIS_URL", "KV_URL"];
+  for (const k of [...prefer, ...Object.keys(env).filter((k) => /(REDIS_URL|KV_URL)$/.test(k))]) {
+    if (/^rediss?:\/\//.test(env[k] || "")) return env[k];
+  }
+  return null;
+}
+function storageVarNames() {
+  return Object.keys(process.env).filter((k) => /REDIS|KV|UPSTASH/i.test(k)).sort();
+}
+
+// ---------- one tiny "run a Redis command" function for both kinds ----------
+let tcpClient = globalThis.__trackerRedis || null;
+async function getRunner() {
+  const rest = findRest();
+  if (rest) {
+    return async (cmd) => {
+      const r = await fetch(rest.url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${rest.token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(cmd),
+      });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error);
+      return j.result;
+    };
+  }
+  const tcpUrl = findTcp();
+  if (tcpUrl) {
+    if (!tcpClient) {
+      const { createClient } = await import("redis");
+      tcpClient = createClient({ url: tcpUrl, socket: { connectTimeout: 8000 } });
+      tcpClient.on("error", () => {});
+      await tcpClient.connect();
+      globalThis.__trackerRedis = tcpClient;
+    }
+    return (cmd) => tcpClient.sendCommand(cmd.map(String));
+  }
+  return null;
 }
 
 function hashToObj(arr) {
   const out = {};
-  if (Array.isArray(arr)) {
-    for (let i = 0; i < arr.length; i += 2) {
-      try { out[arr[i]] = JSON.parse(arr[i + 1]); } catch { /* skip bad entry */ }
-    }
-  } else if (arr && typeof arr === "object") {
-    for (const [k, v] of Object.entries(arr)) { try { out[k] = JSON.parse(v); } catch {} }
-  }
+  const put = (k, v) => { try { out[k] = JSON.parse(v); } catch { /* skip bad entry */ } };
+  if (Array.isArray(arr)) for (let i = 0; i < arr.length; i += 2) put(arr[i], arr[i + 1]);
+  else if (arr && typeof arr === "object") for (const [k, v] of Object.entries(arr)) put(k, v);
   return out;
 }
-
 const clean = (s, n) => String(s ?? "").slice(0, n);
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
-  if (!URL_ || !TOKEN) {
-    return res.status(503).json({ error: "Storage not connected. Add Upstash Redis in Vercel → Storage, then redeploy." });
+  let redis;
+  try {
+    redis = await getRunner();
+  } catch (e) {
+    return res.status(503).json({ error: "Found Redis settings but couldn't connect: " + (e.message || e) });
   }
+  if (!redis) {
+    const seen = storageVarNames();
+    return res.status(503).json({
+      error: seen.length
+        ? `Storage settings found (${seen.join(", ")}) but none usable. Check the database is connected to Production, then redeploy.`
+        : "No storage settings found. Connect the database to this project (Production ticked), then Redeploy.",
+      seenVariableNames: seen,
+    });
+  }
+
   try {
     if (req.method === "GET") {
       const [status, custom, log] = await Promise.all([
